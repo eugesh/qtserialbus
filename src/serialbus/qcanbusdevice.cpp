@@ -334,6 +334,20 @@ QCanBusFrame QCanBusDevice::dequeueOutgoingFrame()
 }
 
 /*!
+    Returns the next \l QCanBusFrame from the internal list of outgoing frames;
+    otherwise returns an invalid QCanBusFrame. The returned frame is not removed
+    from the internal list.
+*/
+QCanBusFrame QCanBusDevice::peekOutgoingFrame() const
+{
+    Q_D(const QCanBusDevice);
+
+    if (Q_UNLIKELY(d->outgoingFrames.isEmpty()))
+        return QCanBusFrame(QCanBusFrame::InvalidFrame);
+    return d->outgoingFrames.first();
+}
+
+/*!
     Returns \c true if the internal list of outgoing frames is not
     empty; otherwise returns \c false.
 */
