@@ -74,6 +74,7 @@ public:
 
 private Q_SLOTS:
     void readSocket();
+    void writeSocket();
 
 private:
     void resetConfigurations();
@@ -88,7 +89,8 @@ private:
     char m_ctrlmsg[CMSG_SPACE(sizeof(timeval)) + CMSG_SPACE(sizeof(__u32))];
 
     qint64 canSocket = -1;
-    QSocketNotifier *notifier = nullptr;
+    QSocketNotifier *readNotifier = nullptr;
+    QSocketNotifier *writeNotifier = nullptr;
     QString canSocketName;
     bool canFdOptionEnabled = false;
 };

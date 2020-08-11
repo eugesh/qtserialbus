@@ -51,3 +51,4 @@ qtserialbus-config.pri
 *.vcxproj.user
 *.sdf
 *.opensdf
+*_build

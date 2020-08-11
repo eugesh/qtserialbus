@@ -145,6 +145,7 @@ protected:
 
     void enqueueOutgoingFrame(const QCanBusFrame &newFrame);
     QCanBusFrame dequeueOutgoingFrame();
+    QCanBusFrame peekOutgoingFrame() const;
     bool hasOutgoingFrames() const;
 
     // TODO Remove once official plugin system is gone
