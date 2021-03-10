@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2021 Evgeny Shtanov <shtanov_evgenii@mail.ru>
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the examples of the QtSerialBus module.
@@ -48,59 +48,70 @@
 **
 ****************************************************************************/
 
-#ifndef CONNECTDIALOG_H
-#define CONNECTDIALOG_H
+#include "common.h"
+#include "receivedframesview.h"
 
-#include <QCanBusDevice>
-#include <QCanBusDeviceInfo>
+#include <QAction>
+#include <QApplication>
+#include <QClipboard>
+#include <QKeyEvent>
+#include <QMenu>
 
-#include <QDialog>
+ReceivedFramesView::ReceivedFramesView(QWidget *parent)
+ : QTableView(parent)
+{
+    setContextMenuPolicy(Qt::CustomContextMenu);
 
-QT_BEGIN_NAMESPACE
+    connect(this, &QWidget::customContextMenuRequested,
+        [this] (const QPoint &pos) {
+        QMenu contextMenu(tr("Context menu"), this);
 
-namespace Ui {
-class ConnectDialog;
+        QAction action1("Copy", this);
+        QAction action2("Select all", this);
+
+        connect(&action1, &QAction::triggered, this, &ReceivedFramesView::copyRow);
+        connect(&action2, &QAction::triggered, this, &QAbstractItemView::selectAll);
+
+        if (selectedIndexes().count())
+            contextMenu.addAction(&action1);
+        contextMenu.addAction(&action2);
+
+        contextMenu.exec(mapToGlobal(pos));
+    });
 }
 
-QT_END_NAMESPACE
-
-class ConnectDialog : public QDialog
+void ReceivedFramesView::setModel(QAbstractItemModel *model)
 {
-    Q_OBJECT
+    QTableView::setModel(model);
 
-public:
-    typedef QPair<QCanBusDevice::ConfigurationKey, QVariant> ConfigurationItem;
+    for (int i = 0, count = model->columnCount(); i < count; i++) {
+        const QSize size = model->headerData(i, Qt::Horizontal, Qt::SizeHintRole).value<QSize>();
+        setColumnWidth(i, size.width());
+    }
+}
 
-    struct Settings {
-        QString pluginName;
-        QString deviceInterfaceName;
-        QList<ConfigurationItem> configurations;
-        bool useConfigurationEnabled = false;
-        bool useModelRingBuffer = true;
-        int modelRingBufferSize = 1000;
-        bool useAutoscroll = false;
-    };
+void ReceivedFramesView::keyPressEvent(QKeyEvent *event) {
+    if (event->matches(QKeySequence::Copy)) {
+        copyRow();
+    } else if (event->matches(QKeySequence::SelectAll)) {
+        selectAll();
+    } else {
+        QTableView::keyPressEvent(event);
+    }
+}
 
-    explicit ConnectDialog(QWidget *parent = nullptr);
-    ~ConnectDialog();
+void ReceivedFramesView::copyRow() {
+    QClipboard *clipboard = QApplication::clipboard();
 
-    Settings settings() const;
+    const QModelIndexList ilist = selectedIndexes();
 
-private slots:
-    void pluginChanged(const QString &plugin);
-    void interfaceChanged(const QString &interface);
-    void ok();
-    void cancel();
-    void on_ringBufferBox_stateChanged(int state);
+    QString strRow;
 
-private:
-    QString configurationValue(QCanBusDevice::ConfigurationKey key);
-    void revertSettings();
-    void updateSettings();
+    for (const QModelIndex &index : ilist) {
+        strRow += index.data(ClipboardTextRole).toString() + " ";
+        if (index.column() == model()->columnCount() - 1)
+            strRow += '\n';
+    }
 
-    Ui::ConnectDialog *m_ui = nullptr;
-    Settings m_currentSettings;
-    QList<QCanBusDeviceInfo> m_interfaces;
-};
-
-#endif // CONNECTDIALOG_H
+    clipboard->setText(strRow);
+}

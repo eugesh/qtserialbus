@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2021 Evgeny Shtanov <shtanov_evgenii@mail.ru>
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the examples of the QtSerialBus module.
@@ -48,59 +48,20 @@
 **
 ****************************************************************************/
 
-#ifndef CONNECTDIALOG_H
-#define CONNECTDIALOG_H
+#ifndef RECEIVEDFRAMESVIEW_H
+#define RECEIVEDFRAMESVIEW_H
 
-#include <QCanBusDevice>
-#include <QCanBusDeviceInfo>
+#include <QTableView>
 
-#include <QDialog>
-
-QT_BEGIN_NAMESPACE
-
-namespace Ui {
-class ConnectDialog;
-}
-
-QT_END_NAMESPACE
-
-class ConnectDialog : public QDialog
+class ReceivedFramesView final: public QTableView
 {
-    Q_OBJECT
-
 public:
-    typedef QPair<QCanBusDevice::ConfigurationKey, QVariant> ConfigurationItem;
+    explicit ReceivedFramesView(QWidget *parent = nullptr);
+    void setModel(QAbstractItemModel *model) final;
 
-    struct Settings {
-        QString pluginName;
-        QString deviceInterfaceName;
-        QList<ConfigurationItem> configurations;
-        bool useConfigurationEnabled = false;
-        bool useModelRingBuffer = true;
-        int modelRingBufferSize = 1000;
-        bool useAutoscroll = false;
-    };
-
-    explicit ConnectDialog(QWidget *parent = nullptr);
-    ~ConnectDialog();
-
-    Settings settings() const;
-
-private slots:
-    void pluginChanged(const QString &plugin);
-    void interfaceChanged(const QString &interface);
-    void ok();
-    void cancel();
-    void on_ringBufferBox_stateChanged(int state);
-
-private:
-    QString configurationValue(QCanBusDevice::ConfigurationKey key);
-    void revertSettings();
-    void updateSettings();
-
-    Ui::ConnectDialog *m_ui = nullptr;
-    Settings m_currentSettings;
-    QList<QCanBusDeviceInfo> m_interfaces;
+protected:
+    void keyPressEvent(QKeyEvent *event) final;
+    void copyRow();
 };
 
-#endif // CONNECTDIALOG_H
+#endif // RECEIVEDFRAMESVIEW_H

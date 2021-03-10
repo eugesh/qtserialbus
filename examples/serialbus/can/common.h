@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2021 Evgeny Shtanov <shtanov_evgenii@mail.ru>
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the examples of the QtSerialBus module.
@@ -48,59 +48,23 @@
 **
 ****************************************************************************/
 
-#ifndef CONNECTDIALOG_H
-#define CONNECTDIALOG_H
+#ifndef COMMON_H
+#define COMMON_H
 
-#include <QCanBusDevice>
-#include <QCanBusDeviceInfo>
+#include <qnamespace.h>
 
-#include <QDialog>
-
-QT_BEGIN_NAMESPACE
-
-namespace Ui {
-class ConnectDialog;
-}
-
-QT_END_NAMESPACE
-
-class ConnectDialog : public QDialog
-{
-    Q_OBJECT
-
-public:
-    typedef QPair<QCanBusDevice::ConfigurationKey, QVariant> ConfigurationItem;
-
-    struct Settings {
-        QString pluginName;
-        QString deviceInterfaceName;
-        QList<ConfigurationItem> configurations;
-        bool useConfigurationEnabled = false;
-        bool useModelRingBuffer = true;
-        int modelRingBufferSize = 1000;
-        bool useAutoscroll = false;
-    };
-
-    explicit ConnectDialog(QWidget *parent = nullptr);
-    ~ConnectDialog();
-
-    Settings settings() const;
-
-private slots:
-    void pluginChanged(const QString &plugin);
-    void interfaceChanged(const QString &interface);
-    void ok();
-    void cancel();
-    void on_ringBufferBox_stateChanged(int state);
-
-private:
-    QString configurationValue(QCanBusDevice::ConfigurationKey key);
-    void revertSettings();
-    void updateSettings();
-
-    Ui::ConnectDialog *m_ui = nullptr;
-    Settings m_currentSettings;
-    QList<QCanBusDeviceInfo> m_interfaces;
+enum ReceivedFramesModelColumns {
+    Number = 0,
+    Timestamp,
+    Flags,
+    CanID,
+    DLC,
+    Data,
+    Count
 };
 
-#endif // CONNECTDIALOG_H
+enum : int {
+  ClipboardTextRole = Qt::UserRole + 1
+};
+
+#endif // COMMON_H

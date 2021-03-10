@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2017 The Qt Company Ltd.
+** Copyright (C) 2021 Evgeny Shtanov <shtanov_evgenii@mail.ru>
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the examples of the QtSerialBus module.
@@ -48,59 +48,43 @@
 **
 ****************************************************************************/
 
-#ifndef CONNECTDIALOG_H
-#define CONNECTDIALOG_H
+#ifndef RECEIVEDFRAMESMODEL_H
+#define RECEIVEDFRAMESMODEL_H
 
-#include <QCanBusDevice>
-#include <QCanBusDeviceInfo>
+#include "common.h"
 
-#include <QDialog>
+#include <QAbstractTableModel>
+#include <QCanBusFrame>
+#include <QQueue>
 
-QT_BEGIN_NAMESPACE
-
-namespace Ui {
-class ConnectDialog;
-}
-
-QT_END_NAMESPACE
-
-class ConnectDialog : public QDialog
+class ReceivedFramesModel : public QAbstractTableModel
 {
-    Q_OBJECT
-
 public:
-    typedef QPair<QCanBusDevice::ConfigurationKey, QVariant> ConfigurationItem;
+    explicit ReceivedFramesModel(QObject *parent = nullptr);
 
-    struct Settings {
-        QString pluginName;
-        QString deviceInterfaceName;
-        QList<ConfigurationItem> configurations;
-        bool useConfigurationEnabled = false;
-        bool useModelRingBuffer = true;
-        int modelRingBufferSize = 1000;
-        bool useAutoscroll = false;
-    };
+    void appendFrame(const QStringList &slist);
+    void appendFrames(const QList<QStringList> &slvector);
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    void clear();
+    void setQueueLimit(int limit = 0); // 0 - unlimited
+    int getQueueLimit() { return m_queueLimit; }
+    bool needUpdate() const;
+    void update();
 
-    explicit ConnectDialog(QWidget *parent = nullptr);
-    ~ConnectDialog();
-
-    Settings settings() const;
-
-private slots:
-    void pluginChanged(const QString &plugin);
-    void interfaceChanged(const QString &interface);
-    void ok();
-    void cancel();
-    void on_ringBufferBox_stateChanged(int state);
+protected:
+    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
 
 private:
-    QString configurationValue(QCanBusDevice::ConfigurationKey key);
-    void revertSettings();
-    void updateSettings();
+    void appendFramesRingBuffer(const QList<QStringList> &slvector);
+    void appendFramesUnlimited(const QList<QStringList> &slvector);
 
-    Ui::ConnectDialog *m_ui = nullptr;
-    Settings m_currentSettings;
-    QList<QCanBusDeviceInfo> m_interfaces;
+private:
+    QQueue<QStringList> m_framesQueue;
+    QList<QStringList> m_framesAccumulator; // Temporary variable to insert frames data
+    int m_queueLimit = 0;
 };
 
-#endif // CONNECTDIALOG_H
+#endif // RECEIVEDFRAMESMODEL_H

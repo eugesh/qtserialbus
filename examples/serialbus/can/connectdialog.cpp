@@ -195,6 +195,10 @@ void ConnectDialog::updateSettings()
     m_currentSettings.deviceInterfaceName = m_ui->interfaceListBox->currentText();
     m_currentSettings.useConfigurationEnabled = m_ui->useConfigurationBox->isChecked();
 
+    m_currentSettings.useModelRingBuffer = m_ui->ringBufferBox->isChecked();
+    m_currentSettings.modelRingBufferSize = m_ui->ringBufferLimitBox->value();
+    m_currentSettings.useAutoscroll = m_ui->autoscrollBox->isChecked();
+
     if (m_currentSettings.useConfigurationEnabled) {
         m_currentSettings.configurations.clear();
         // process LoopBack
@@ -251,4 +255,9 @@ void ConnectDialog::updateSettings()
             m_currentSettings.configurations.append(item);
         }
     }
+}
+
+void ConnectDialog::on_ringBufferBox_stateChanged(int state)
+{
+    m_ui->ringBufferLimitBox->setEnabled(state == Qt::CheckState::Checked);
 }
