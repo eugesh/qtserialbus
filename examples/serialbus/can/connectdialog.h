@@ -91,7 +91,6 @@ private slots:
     void interfaceChanged(const QString &interface);
     void ok();
     void cancel();
-    void on_ringBufferBox_stateChanged(int state);
 
 private:
     QString configurationValue(QCanBusDevice::ConfigurationKey key);

@@ -82,6 +82,10 @@ ConnectDialog::ConnectDialog(QWidget *parent) :
             this, &ConnectDialog::pluginChanged);
     connect(m_ui->interfaceListBox, &QComboBox::currentTextChanged,
             this, &ConnectDialog::interfaceChanged);
+    connect(m_ui->ringBufferBox, &QCheckBox::stateChanged, [this](int state){
+            m_ui->ringBufferLimitBox->setEnabled(state == Qt::CheckState::Checked);
+    });
+
     m_ui->rawFilterEdit->hide();
     m_ui->rawFilterLabel->hide();
 
@@ -255,12 +259,4 @@ void ConnectDialog::updateSettings()
             m_currentSettings.configurations.append(item);
         }
     }
-}
-
-void ConnectDialog::on_ringBufferBox_stateChanged(int state)
-{
-    if (state == Qt::CheckState::Checked)
-        m_ui->ringBufferLimitBox->setEnabled(true);
-    else
-        m_ui->ringBufferLimitBox->setEnabled(false);
 }
