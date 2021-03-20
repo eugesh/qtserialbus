@@ -256,6 +256,10 @@ public:
         isLocalEcho = (localEcho & 0x1);
     }
 
+    int bitsPerFrame() const {
+        return (hasExtendedFrameFormat() ? 29 : 11) + load.size() * 8 + 33;
+    }
+
 #ifndef QT_NO_DATASTREAM
     friend Q_SERIALBUS_EXPORT QDataStream &operator<<(QDataStream &, const QCanBusFrame &);
     friend Q_SERIALBUS_EXPORT QDataStream &operator>>(QDataStream &, QCanBusFrame &);

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>634</width>
-    <height>527</height>
+    <width>646</width>
+    <height>481</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -68,6 +68,36 @@
              </property>
             </spacer>
            </item>
+           <item>
+            <widget class="QLabel" name="activeSessionLabel">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="activeSessionTime">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Receive activity duration, sec&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QProgressBar" name="bitrateIndicatorBar">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;CAN bus load&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="maximum">
+              <number>100</number>
+             </property>
+             <property name="value">
+              <number>0</number>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
         </layout>
@@ -82,7 +112,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>634</width>
+     <width>646</width>
      <height>22</height>
     </rect>
    </property>
