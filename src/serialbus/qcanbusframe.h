@@ -256,8 +256,8 @@ public:
         isLocalEcho = (localEcho & 0x1);
     }
 
-    quint16 bitsPerFrame() const {
-        return static_cast<quint16>((hasExtendedFrameFormat() ? 29 : 11) + load.size() * 8 + 33);
+    int bitsPerFrame() const {
+        return (hasExtendedFrameFormat() ? 29 : 11) + load.size() * 8 + 33;
     }
 
 #ifndef QT_NO_DATASTREAM

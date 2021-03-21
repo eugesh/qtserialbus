@@ -53,8 +53,6 @@
 #include "connectdialog.h"
 #include "receivedframesmodel.h"
 
-#include <cmath>
-
 #include <QCanBus>
 #include <QCanBusFrame>
 #include <QCloseEvent>
@@ -62,6 +60,7 @@
 #include <QDesktopServices>
 #include <QLabel>
 #include <QTimer>
+#include <cmath>
 
 static int constexpr activityTimeout = 1000; // [ms]
 
@@ -98,7 +97,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Activity check
     connect(m_sessionTimer, &QTimer::timeout, this, &MainWindow::handleActivityTimeout);
-    m_ui->activeSessionLabel->setText("Time spent: ");
+    m_ui->activeSessionLabel->setText(tr("Time spent: "));
     m_ui->activeSessionTime->setText("0 s");
     m_ui->bitrateIndicatorBar->setValue(0);
 }
@@ -341,7 +340,8 @@ void MainWindow::onAppendFramesTimeout()
     }
 }
 
-void MainWindow::handleActivityTimeout() {
+void MainWindow::handleActivityTimeout()
+{
     if (!m_canDevice)
         return;
 
@@ -356,7 +356,7 @@ void MainWindow::handleActivityTimeout() {
     m_time++;
     m_ui->activeSessionTime->setText(QString("%1 s").arg(m_time));
 
-    double bitRate = m_canDevice->configurationParameter(QCanBusDevice::BitRateKey).toDouble();
+    const double bitRate = m_canDevice->configurationParameter(QCanBusDevice::BitRateKey).toDouble();
     if (std::isnormal(bitRate))  {
        m_ui->bitrateIndicatorBar->setMaximum(100);
        m_ui->bitrateIndicatorBar->setValue(qRound(100 * m_bitCounter / bitRate));
