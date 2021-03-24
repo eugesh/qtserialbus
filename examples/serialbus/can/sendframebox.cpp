@@ -74,7 +74,8 @@ bool isEvenHex(QString input)
     return true;
 }
 
-// brings input string to canonical candump like view
+// Formats a string of hex characters with a space between every byte
+// Example: "012345" -> "01 23 45"
 static QString formatHexData(const QString &input)
 {
     const QChar space = QLatin1Char(' ');
@@ -94,7 +95,7 @@ static QString formatHexData(const QString &input)
         }
     }
 
-    return out.simplified();
+    return out.simplified().toUpper();
 }
 
 HexIntegerValidator::HexIntegerValidator(QObject *parent) :
@@ -205,7 +206,7 @@ SendFrameBox::SendFrameBox(QWidget *parent) :
             m_ui->bitrateSwitchBox->setChecked(false);
     });
 
-    auto frameIdTextChanged = [this]() {
+    auto frameIdOrPayloadChanged = [this]() {
         const bool hasFrameId = !m_ui->frameIdEdit->text().isEmpty();
         m_ui->sendButton->setEnabled(hasFrameId);
         m_ui->sendButton->setToolTip(hasFrameId
@@ -217,9 +218,9 @@ SendFrameBox::SendFrameBox(QWidget *parent) :
                                          ? QString() : tr("Cannot send because Payload hex string is invalid."));
         }
     };
-    connect(m_ui->frameIdEdit, &QLineEdit::textChanged, frameIdTextChanged);
-    connect(m_ui->payloadEdit, &QLineEdit::textChanged, frameIdTextChanged);
-    frameIdTextChanged();
+    connect(m_ui->frameIdEdit, &QLineEdit::textChanged, frameIdOrPayloadChanged);
+    connect(m_ui->payloadEdit, &QLineEdit::textChanged, frameIdOrPayloadChanged);
+    frameIdOrPayloadChanged();
 
     connect(m_ui->sendButton, &QPushButton::clicked, [this]() {
         const uint frameId = m_ui->frameIdEdit->text().toUInt(nullptr, 16);
