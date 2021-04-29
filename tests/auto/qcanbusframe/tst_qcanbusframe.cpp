@@ -54,6 +54,7 @@ private slots:
     void errorStateIndicator();
     void localEcho();
 
+    void tst_bitsPerFrame();
     void tst_isValid_data();
     void tst_isValid();
     void tst_isValidSize_data();
@@ -282,6 +283,71 @@ void tst_QCanBusFrame::localEcho()
 
     const QCanBusFrame frame2(0x123, QByteArray());
     QVERIFY(!frame2.hasLocalEcho());
+}
+
+void tst_QCanBusFrame::tst_bitsPerFrame() {
+    QCanBusFrame frame;
+    const QVector<int> payloadSizes = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
+
+    // Calculated by hand and partially verified with https://docs.google.com/spreadsheets/d/16XIceuoG_YBlgyFKXxjYQk2016ln3NeEC68yoMFvwkA/edit#gid=0
+    const QVector<int> bitsPerFrameCANBaseID = {47, 55, 63, 71, 79, 87, 95, 103, 111};
+    const QVector<int> bitsPerFrameCANExtendedID = {67, 75, 83, 91, 99, 107, 115, 123, 131};
+
+    const QVector<int> bitsPerFrameCANFDBaseIDNoFSB = {56, 64, 72, 80, 88, 96, 104, 112, 120, 152, 184, 220, 252, 316, 444, 572};
+    const QVector<int> bitsPerFrameCANFDBaseIDFSB = {62, 70, 78, 86, 94, 102, 110, 118, 126, 158, 190, 227, 259, 323, 451, 579};
+
+    const QVector<int> bitsPerFrameCANFDExtendedIDNoFSB = {75, 83, 91, 99, 107, 115, 123, 131, 139, 171, 203, 239, 271, 335, 463, 591};
+    const QVector<int> bitsPerFrameCANFDExtendedIDFSB = {81, 89, 97, 105, 113, 121, 129, 137, 145, 177, 209, 246, 278, 342, 470, 598};
+
+    QByteArray payload;
+
+    // Classical CAN base ID
+    for (int i = 0; i < 8; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame() == bitsPerFrameCANBaseID[i]);
+    }
+
+    // Classical CAN extended ID
+    frame.setExtendedFrameFormat(true);
+    for (int i = 0; i < 8; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame() == bitsPerFrameCANExtendedID[i]);
+    }
+
+    // CAN FD
+    frame.setExtendedFrameFormat(false);
+    frame.setFlexibleDataRateFormat(true);
+
+    // CAN FD base ID without FSB
+    for (int i = 0; i < 15; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame(false) == bitsPerFrameCANFDBaseIDNoFSB[i]);
+    }
+
+    // CAN FD base ID with FSB
+    for (int i = 0; i < 15; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame() == bitsPerFrameCANFDBaseIDFSB[i]);
+    }
+
+    // CAN FD extended ID without FSB
+    frame.setExtendedFrameFormat(true);
+    for (int i = 0; i < 15; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame(false) == bitsPerFrameCANFDExtendedIDNoFSB[i]);
+    }
+
+    // CAN FD extended ID with FSB
+    for (int i = 0; i < 15; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame() == bitsPerFrameCANFDExtendedIDFSB[i]);
+    }
 }
 
 void tst_QCanBusFrame::tst_isValid_data()

@@ -348,6 +348,15 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
+    \fn int QCanBusFrame::bitsPerFrame(bool includeFSB = true) const noexcept
+    \since 6.2
+
+    Returns number of bits in CAN bus frame.
+    \a includeFSB indicates whether count fixed stuff bits in CRC of CAN FD. True by default.
+    Doesn't count stuff bits in the rest of frame.
+*/
+
+/*!
     \class QCanBusFrame::TimeStamp
     \inmodule QtSerialBus
     \since 5.8
