@@ -22,6 +22,7 @@ HEADERS += \
     common.h \
     connectdialog.h \
     mainwindow.h \
+    qchecklist.h \
     receivedframesmodel.h \
     receivedframesview.h \
     sendframebox.h

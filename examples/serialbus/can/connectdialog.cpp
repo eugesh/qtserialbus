@@ -59,7 +59,18 @@ ConnectDialog::ConnectDialog(QWidget *parent) :
 {
     m_ui->setupUi(this);
 
-    m_ui->errorFilterEdit->setValidator(new QIntValidator(0, 0x1FFFFFFFU, this));
+    m_ui->errFilterComboBox->addCheckItem("NoError", QCanBusFrame::NoError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("TransmissionTimeoutError", QCanBusFrame::TransmissionTimeoutError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("LostArbitrationError", QCanBusFrame::LostArbitrationError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("ControllerError", QCanBusFrame::ControllerError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("ProtocolViolationError", QCanBusFrame::ProtocolViolationError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("TransceiverError", QCanBusFrame::TransceiverError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("MissingAcknowledgmentError", QCanBusFrame::MissingAcknowledgmentError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("BusOffError", QCanBusFrame::BusOffError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("BusError", QCanBusFrame::BusError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("ControllerRestartError", QCanBusFrame::ControllerRestartError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("UnknownError", QCanBusFrame::UnknownError, Qt::Unchecked);
+    m_ui->errFilterComboBox->addCheckItem("AnyError", QCanBusFrame::AnyError, Qt::Unchecked);
 
     m_ui->loopbackBox->addItem(tr("unspecified"), QVariant());
     m_ui->loopbackBox->addItem(tr("false"), QVariant(false));
@@ -85,6 +96,22 @@ ConnectDialog::ConnectDialog(QWidget *parent) :
     connect(m_ui->ringBufferBox, &QCheckBox::stateChanged, [this](int state){
             m_ui->ringBufferLimitBox->setEnabled(state == Qt::CheckState::Checked);
     });
+    connect(m_ui->errFilterComboBox, &QCheckList::checkStateChanged, [=](int index, Qt::CheckState state) {
+        if (m_ui->errFilterComboBox->itemText(index) == "NoError" && state == Qt::Checked) {
+            for (int i = 1; i < m_ui->errFilterComboBox->count(); ++i) {
+                m_ui->errFilterComboBox->setChecked(i, Qt::Unchecked);
+            }
+        } else if (m_ui->errFilterComboBox->itemText(index) == "AnyError" && state == Qt::Checked) {
+            m_ui->errFilterComboBox->setChecked("NoError", Qt::Unchecked);
+            for (int i = 1; i < m_ui->errFilterComboBox->count(); ++i) {
+                m_ui->errFilterComboBox->setChecked(i, Qt::Checked);
+            }
+        } else if (m_ui->errFilterComboBox->isChecked("NoError")) {
+            m_ui->errFilterComboBox->setChecked("NoError", Qt::Unchecked);
+        } else if (state == Qt::Unchecked && m_ui->errFilterComboBox->itemText(index) != "NoError" ) {
+            m_ui->errFilterComboBox->setChecked("AnyError", Qt::Unchecked);
+        }
+    } );
 
     m_ui->rawFilterEdit->hide();
     m_ui->rawFilterLabel->hide();
@@ -170,7 +197,32 @@ void ConnectDialog::revertSettings()
     m_ui->receiveOwnBox->setCurrentText(value);
 
     value = configurationValue(QCanBusDevice::ErrorFilterKey);
-    m_ui->errorFilterEdit->setText(value);
+    auto mask = value.toInt();
+    m_ui->errFilterComboBox->setChecked("NoError",
+                                        mask | QCanBusFrame::NoError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("TransmissionTimeoutError",
+                                        mask | QCanBusFrame::TransmissionTimeoutError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("LostArbitrationError",
+                                        mask | QCanBusFrame::LostArbitrationError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("ControllerError",
+                                        mask | QCanBusFrame::ControllerError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("ProtocolViolationError",
+                                        mask | QCanBusFrame::ProtocolViolationError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("TransceiverError",
+                                        mask | QCanBusFrame::TransceiverError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("MissingAcknowledgmentError",
+                                        mask | QCanBusFrame::MissingAcknowledgmentError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("BusOffError",
+                                        mask | QCanBusFrame::BusOffError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("BusError",
+                                        mask | QCanBusFrame::BusError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("ControllerRestartError",
+                                        mask | QCanBusFrame::ControllerRestartError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("UnknownError",
+                                        mask | QCanBusFrame::UnknownError ? Qt::Checked : Qt::Unchecked);
+    m_ui->errFilterComboBox->setChecked("AnyError",
+                                        mask | QCanBusFrame::AnyError ? Qt::Checked : Qt::Unchecked);
+
 
     value = configurationValue(QCanBusDevice::BitRateKey);
     m_ui->bitrateBox->setCurrentText(value);
@@ -211,16 +263,16 @@ void ConnectDialog::updateSettings()
         }
 
         // process error filter
-        if (!m_ui->errorFilterEdit->text().isEmpty()) {
-            QString value = m_ui->errorFilterEdit->text();
-            bool ok = false;
-            int dec = value.toInt(&ok);
-            if (ok) {
-                ConfigurationItem item;
-                item.first = QCanBusDevice::ErrorFilterKey;
-                item.second = QVariant::fromValue(QCanBusFrame::FrameErrors(dec));
-                m_currentSettings.configurations.append(item);
+        if (m_ui->errFilterComboBox->globalCheckState() != Qt::Unchecked) {
+            int mask = 0;
+            foreach (auto item, m_ui->errFilterComboBox->checkedItems()) {
+                mask |= item->data().toInt();
             }
+
+            ConfigurationItem item;
+            item.first = QCanBusDevice::ErrorFilterKey;
+            item.second = QVariant::fromValue(QCanBusFrame::FrameErrors(mask));
+            m_currentSettings.configurations.append(item);
         }
 
         // process raw filter list

@@ -127,16 +127,6 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
-         <widget class="QLineEdit" name="errorFilterEdit">
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-          <property name="placeholderText">
-           <string>FrameError bits</string>
-          </property>
-         </widget>
-        </item>
         <item row="2" column="0">
          <widget class="QLabel" name="loopbackLabel">
           <property name="text">
@@ -186,6 +176,9 @@
         </item>
         <item row="6" column="1">
          <widget class="BitRateBox" name="dataBitrateBox"/>
+        </item>
+        <item row="1" column="1">
+         <widget class="QCheckList" name="errFilterComboBox"/>
         </item>
        </layout>
       </widget>
@@ -272,6 +265,11 @@
    <extends>QGroupBox</extends>
    <header location="global">canbusdeviceinfobox.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QCheckList</class>
+   <extends>QComboBox</extends>
+   <header>qchecklist.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
