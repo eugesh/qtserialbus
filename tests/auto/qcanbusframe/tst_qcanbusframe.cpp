@@ -39,6 +39,11 @@
 #include <QtCore/qdatastream.h>
 #include <QtTest/qtest.h>
 
+#include </home/evgeny/workspace/can/can-utils/canframelen.h>
+extern "C" {
+//unsigned can_frame_length(struct canfd_frame *frame, enum cfl_mode mode, int mtu);
+}
+
 class tst_QCanBusFrame : public QObject
 {
     Q_OBJECT
@@ -54,6 +59,7 @@ private slots:
     void errorStateIndicator();
     void localEcho();
 
+    void tst_bitsPerFrame();
     void tst_isValid_data();
     void tst_isValid();
     void tst_isValidSize_data();
@@ -282,6 +288,80 @@ void tst_QCanBusFrame::localEcho()
 
     const QCanBusFrame frame2(0x123, QByteArray());
     QVERIFY(!frame2.hasLocalEcho());
+}
+
+void tst_QCanBusFrame::tst_bitsPerFrame() {
+    QCanBusFrame frame;
+    QVector<int> payloadSizes = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
+
+    // Calculated by hand and used https://docs.google.com/spreadsheets/d/16XIceuoG_YBlgyFKXxjYQk2016ln3NeEC68yoMFvwkA/edit#gid=0
+    QVector<int> bitsPerFrameCANBaseID = {47, 55, 63, 71, 79, 87, 95, 103, 111};
+    QVector<int> bitsPerFrameCANExtendedID = {67, 75, 83, 91, 99, 107, 115, 123, 131};
+
+    QVector<int> bitsPerFrameCANFDBaseIDNoFSB = {56, 64, 72, 80, 88, 96, 104, 112, 120, 152, 184, 220, 252, 316, 444, 572};
+    QVector<int> bitsPerFrameCANFDBaseIDFSB = {62, 70, 78, 86, 94, 102, 110, 118, 126, 158, 190, 227, 259, 323, 451, 579};
+
+    QVector<int> bitsPerFrameCANFDExtendedIDNoFSB = {75, 83, 91, 99, 107, 115, 123, 131, 139, 171, 203, 239, 271, 335, 463, 591};
+    QVector<int> bitsPerFrameCANFDExtendedIDFSB = {81, 89, 97, 105, 113, 121, 129, 137, 145, 177, 209, 246, 278, 342, 470, 598};
+
+    QByteArray payload;
+
+    // Classical CAN base ID
+    for (int i = 0; i < 8; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame() == bitsPerFrameCANBaseID[i]);
+    }
+
+    // Classical CAN extended ID
+    frame.setExtendedFrameFormat(true);
+    for (int i = 0; i < 8; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame() == bitsPerFrameCANExtendedID[i]);
+    }
+
+    // CAN FD
+    frame.setExtendedFrameFormat(false);
+    frame.setFlexibleDataRateFormat(true);
+
+    // CAN FD base ID no FSB
+    for (int i = 0; i < 15; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame(false) == bitsPerFrameCANFDBaseIDNoFSB[i]);
+    }
+
+    // CAN FD base ID with FSB
+    for (int i = 0; i < 15; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame() == bitsPerFrameCANFDBaseIDFSB[i]);
+    }
+
+    // CAN FD extended ID no FSB
+    frame.setExtendedFrameFormat(true);
+    for (int i = 0; i < 15; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame(false) == bitsPerFrameCANFDExtendedIDNoFSB[i]);
+    }
+
+    // CAN FD extended ID with FSB
+    for (int i = 0; i < 15; i++) {
+        payload.resize(payloadSizes[i]);
+        frame.setPayload(payload);
+        QVERIFY(frame.bitsPerFrame() == bitsPerFrameCANFDExtendedIDFSB[i]);
+    }
+
+    // Print CAN frame length by CAN-utils
+    /*for (int i = 0; i < 8; i++) {
+        //payload.resize(payloadSizes[i]);
+        struct canfd_frame cframe;
+        cframe.can_id = 0;
+        cframe.len = payloadSizes[i];
+        qDebug() << can_frame_length(&cframe, cfl_mode(0), sizeof(cframe)) << " ";
+    }*/
 }
 
 void tst_QCanBusFrame::tst_isValid_data()

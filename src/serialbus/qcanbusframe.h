@@ -258,6 +258,36 @@ public:
         isLocalEcho = (localEcho & 0x1);
     }
 
+    int bitsPerFrame(bool includeFSB = true) const
+    {
+        // I would like to introduce farther another argment like: enum cfl_mode mode = CFL_NO_BITSTUFFING in
+        //  https://github.com/linux-can/can-utils/blob/master/canframelen.h
+
+        if (hasFlexibleDataRateFormat()) {
+            int CRCLen;
+            if (load.size() <= 16) {
+                // CRC_17 + 4 stuff count + Delimiter
+                CRCLen = 22; // use CRC_17 macro - ?
+
+                if (includeFSB)
+                    CRCLen += 6;
+            } else {
+                // CRC_21 + 4 stuff count + Delimiter
+                CRCLen = 26; // use CRC_21 macro - ?
+
+                if (includeFSB)
+                    CRCLen += 7;
+            }
+            // SOF + 11 ID + (RRS + IDE) || (SRR + IDE + 18 ID + RRS) + FDF + res + BRS + ESI + 4 DLC + 2 ACK + 7 EOF + 3 IMF
+            return (hasExtendedFrameFormat() ? 53 : 34) +
+                    load.size() * 8 + CRCLen;
+        } else {
+            // https://github.com/linux-can/can-utils/blob/master/canframelen.c
+            return (hasExtendedFrameFormat() ? 67 : 47) + load.size() * 8;
+        }
+    }
+
+
 #ifndef QT_NO_DATASTREAM
     friend Q_SERIALBUS_EXPORT QDataStream &operator<<(QDataStream &, const QCanBusFrame &);
     friend Q_SERIALBUS_EXPORT QDataStream &operator>>(QDataStream &, QCanBusFrame &);
