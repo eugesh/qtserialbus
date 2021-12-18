@@ -1,34 +1,37 @@
 ﻿/****************************************************************************
 **
 ** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: http://www.qt.io/licensing/
+** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the QtSerialBus module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL3$
+** $QT_BEGIN_LICENSE:LGPL$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see http://www.qt.io/terms-conditions. For further
-** information use the contact form at http://www.qt.io/contact-us.
+** and conditions see https://www.qt.io/terms-conditions. For further
+** information use the contact form at https://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** Foundation and appearing in the file LICENSE.LGPL3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl.html.
+** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or later as published by the Free
-** Software Foundation and appearing in the file LICENSE.GPL included in
-** the packaging of this file. Please review the following information to
-** ensure the GNU General Public License version 2.0 requirements will be
-** met: http://www.gnu.org/licenses/gpl-2.0.html.
+** General Public License version 2.0 or (at your option) the GNU General
+** Public license version 3 or any later version approved by the KDE Free
+** Qt Foundation. The licenses are as published by the Free Software
+** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
+** included in the packaging of this file. Please review the following
+** information to ensure the GNU General Public License requirements will
+** be met: https://www.gnu.org/licenses/gpl-2.0.html and
+** https://www.gnu.org/licenses/gpl-3.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -56,30 +59,6 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
-
-#ifndef CANFD_MTU
-// CAN FD support was added by Linux kernel 3.6
-// For prior kernels we redefine the missing defines here
-// they are taken from linux/can/raw.h & linux/can.h
-
-enum {
-    CAN_RAW_FD_FRAMES = 5
-};
-
-#define CAN_MAX_DLEN 8
-#define CANFD_MAX_DLEN 64
-struct canfd_frame {
-    canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
-    __u8    len;     /* frame payload length in byte */
-    __u8    flags;   /* additional flags for CAN FD */
-    __u8    __res0;  /* reserved / padding */
-    __u8    __res1;  /* reserved / padding */
-    __u8    data[CANFD_MAX_DLEN] __attribute__((aligned(8)));
-};
-#define CAN_MTU     (sizeof(struct can_frame))
-#define CANFD_MTU   (sizeof(struct canfd_frame))
-
-#endif
 
 #ifndef CANFD_BRS
 #   define CANFD_BRS 0x01 /* bit rate switch (second bitrate for payload data) */
@@ -152,6 +131,18 @@ static int deviceChannel(const QString &canDevice)
     return content.toInt(nullptr, 0);
 }
 
+QCanBusDeviceInfo SocketCanBackend::socketCanDeviceInfo(const QString &deviceName)
+{
+    const QString serial; // exists for code readability purposes only
+    const QString alias;  // exists for code readability purposes only
+    const QString description = deviceDescription(deviceName);
+    const int channel = deviceChannel(deviceName);
+    return createDeviceInfo(QStringLiteral("socketcan"), deviceName,
+                            serial, description,
+                            alias, channel, isVirtual(deviceName),
+                            isFlexibleDataRateCapable(deviceName));
+}
+
 QList<QCanBusDeviceInfo> SocketCanBackend::interfaces()
 {
     QList<QCanBusDeviceInfo> result;
@@ -168,12 +159,7 @@ QList<QCanBusDeviceInfo> SocketCanBackend::interfaces()
         if (!(flags(deviceName) & DeviceIsActive))
             continue;
 
-        const QString serial;
-        const QString description = deviceDescription(deviceName);
-        const int channel = deviceChannel(deviceName);
-        result.append(std::move(createDeviceInfo(deviceName, serial, description,
-                                                 channel, isVirtual(deviceName),
-                                                 isFlexibleDataRateCapable(deviceName))));
+        result.append(socketCanDeviceInfo(deviceName));
     }
 
     std::sort(result.begin(), result.end(),
@@ -182,6 +168,11 @@ QList<QCanBusDeviceInfo> SocketCanBackend::interfaces()
     });
 
     return result;
+}
+
+QCanBusDeviceInfo SocketCanBackend::deviceInfo() const
+{
+    return socketCanDeviceInfo(canSocketName);
 }
 
 SocketCanBackend::SocketCanBackend(const QString &name) :
@@ -196,16 +187,6 @@ SocketCanBackend::SocketCanBackend(const QString &name) :
     }
 
     resetConfigurations();
-
-    std::function<void()> f = std::bind(&SocketCanBackend::resetController, this);
-    setResetControllerFunction(f);
-
-    if (hasBusStatus()) {
-        // Only register busStatus when libsocketcan is available
-        // QCanBusDevice::hasBusStatus() will return false otherwise
-        std::function<CanBusStatus()> g = std::bind(&SocketCanBackend::busStatus, this);
-        setCanBusStatusGetter(g);
-    }
 }
 
 SocketCanBackend::~SocketCanBackend()
@@ -249,7 +230,7 @@ void SocketCanBackend::close()
     setState(QCanBusDevice::UnconnectedState);
 }
 
-bool SocketCanBackend::applyConfigurationParameter(int key, const QVariant &value)
+bool SocketCanBackend::applyConfigurationParameter(ConfigurationKey key, const QVariant &value)
 {
     bool success = false;
 
@@ -309,7 +290,7 @@ bool SocketCanBackend::applyConfigurationParameter(int key, const QVariant &valu
             break;
         }
 
-        QVector<can_filter> filters;
+        QList<can_filter> filters;
         filters.resize(filterList.size());
         for (int i = 0; i < filterList.size(); i++) {
             const QCanBusDevice::Filter f = filterList.at(i);
@@ -374,11 +355,11 @@ bool SocketCanBackend::applyConfigurationParameter(int key, const QVariant &valu
     case QCanBusDevice::BitRateKey:
     {
         const quint32 bitRate = value.toUInt();
-        libSocketCan->setBitrate(canSocketName, bitRate);
+        success = libSocketCan->setBitrate(canSocketName, bitRate);
         break;
     }
     default:
-        setError(tr("SocketCanBackend: No such configuration as %1 in SocketCanBackend").arg(key),
+        setError(tr("Unsupported configuration key: %1").arg(key),
                  QCanBusDevice::CanBusError::ConfigurationError);
         break;
     }
@@ -428,7 +409,7 @@ bool SocketCanBackend::connectSocket()
 
     //apply all stored configurations
     const auto keys = configurationKeys();
-    for (int key : keys) {
+    for (ConfigurationKey key : keys) {
         const QVariant param = configurationParameter(key);
         bool success = applyConfigurationParameter(key, param);
         if (Q_UNLIKELY(!success)) {
@@ -440,7 +421,7 @@ bool SocketCanBackend::connectSocket()
     return true;
 }
 
-void SocketCanBackend::setConfigurationParameter(int key, const QVariant &value)
+void SocketCanBackend::setConfigurationParameter(ConfigurationKey key, const QVariant &value)
 {
     if (key == QCanBusDevice::RawFilterKey) {
         //verify valid/supported filters
@@ -484,7 +465,7 @@ void SocketCanBackend::setConfigurationParameter(int key, const QVariant &value)
 
     QCanBusDevice::setConfigurationParameter(key, value);
 
-    // we need to check CAN FD option a lot -> cache it and avoid QVector lookup
+    // we need to check CAN FD option a lot -> cache it and avoid QList lookup
     if (key == QCanBusDevice::CanFdKey)
         canFdOptionEnabled = value.toBool();
 }
@@ -584,7 +565,7 @@ QString SocketCanBackend::interpretErrorFrame(const QCanBusFrame &errorFrame)
     QString errorMsg;
 
     if (errorFrame.error() & QCanBusFrame::TransmissionTimeoutError)
-        errorMsg += QStringLiteral("TX timout\n");
+        errorMsg += QStringLiteral("TX timeout\n");
 
     if (errorFrame.error() & QCanBusFrame::MissingAcknowledgmentError)
         errorMsg += QStringLiteral("Received no ACK on transmission\n");
@@ -739,7 +720,7 @@ QString SocketCanBackend::interpretErrorFrame(const QCanBusFrame &errorFrame)
 
 void SocketCanBackend::readSocket()
 {
-    QVector<QCanBusFrame> newFrames;
+    QList<QCanBusFrame> newFrames;
 
     for (;;) {
         m_frame = {};
@@ -806,10 +787,13 @@ void SocketCanBackend::resetController()
 
 bool SocketCanBackend::hasBusStatus() const
 {
+    if (isVirtual(canSocketName.toLatin1()))
+        return false;
+
     return libSocketCan->hasBusStatus();
 }
 
-QCanBusDevice::CanBusStatus SocketCanBackend::busStatus() const
+QCanBusDevice::CanBusStatus SocketCanBackend::busStatus()
 {
     return libSocketCan->busStatus(canSocketName);
 }

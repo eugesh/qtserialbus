@@ -1,34 +1,37 @@
 /****************************************************************************
 **
 ** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: http://www.qt.io/licensing/
+** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the QtSerialBus module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL3$
+** $QT_BEGIN_LICENSE:LGPL$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see http://www.qt.io/terms-conditions. For further
-** information use the contact form at http://www.qt.io/contact-us.
+** and conditions see https://www.qt.io/terms-conditions. For further
+** information use the contact form at https://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** Foundation and appearing in the file LICENSE.LGPL3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl.html.
+** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or later as published by the Free
-** Software Foundation and appearing in the file LICENSE.GPL included in
-** the packaging of this file. Please review the following information to
-** ensure the GNU General Public License version 2.0 requirements will be
-** met: http://www.gnu.org/licenses/gpl-2.0.html.
+** General Public License version 2.0 or (at your option) the GNU General
+** Public license version 3 or any later version approved by the KDE Free
+** Qt Foundation. The licenses are as published by the Free Software
+** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
+** included in the packaging of this file. Please review the following
+** information to ensure the GNU General Public License requirements will
+** be met: https://www.gnu.org/licenses/gpl-2.0.html and
+** https://www.gnu.org/licenses/gpl-3.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -37,8 +40,9 @@
 #define QMODBUSPDU_H
 
 #include <QtCore/qdatastream.h>
+#include <QtCore/qiodevice.h>
+#include <QtCore/qlist.h>
 #include <QtCore/qmetatype.h>
-#include <QtCore/qvector.h>
 #include <QtSerialBus/qtserialbusglobal.h>
 
 QT_BEGIN_NAMESPACE
@@ -141,18 +145,23 @@ private:
         enum { value = std::is_same<T, T1>::value || IsType<T, Ts...>::value };
     };
 
+    template <typename T>
+    using is_pod = std::integral_constant<bool, std::is_trivial<T>::value && std::is_standard_layout<T>::value>;
+
     template <typename T> void encode(QDataStream *stream, const T &t) {
-        static_assert(std::is_pod<T>::value, "Only POD types supported.");
+        static_assert(is_pod<T>::value, "Only POD types supported.");
         static_assert(IsType<T, quint8, quint16>::value, "Only quint8 and quint16 supported.");
         (*stream) << t;
     }
     template <typename T> void decode(QDataStream *stream, T &t) const {
-        static_assert(std::is_pod<T>::value, "Only POD types supported.");
+        static_assert(is_pod<T>::value, "Only POD types supported.");
         static_assert(IsType<T, quint8 *, quint16 *>::value, "Only quint8* and quint16* supported.");
         (*stream) >> *t;
     }
-    template <typename T> void encode(QDataStream *stream, const QVector<T> &vector) {
-        static_assert(std::is_pod<T>::value, "Only POD types supported.");
+    template<typename T>
+    void encode(QDataStream *stream, const QList<T> &vector)
+    {
+        static_assert(is_pod<T>::value, "Only POD types supported.");
         static_assert(IsType<T, quint8, quint16>::value, "Only quint8 and quint16 supported.");
         for (int i = 0; i < vector.count(); ++i)
             (*stream) << vector[i];
@@ -164,7 +173,7 @@ private:
         if (argCount > 0) {
             QDataStream stream(&m_data, QIODevice::WriteOnly);
             char tmp[argCount] = { (encode(&stream, newData), void(), '0')... };
-            Q_UNUSED(tmp)
+            Q_UNUSED(tmp);
         }
     }
     template<typename ... Args> void decode(Args ... newData) const {
@@ -172,7 +181,7 @@ private:
         if (argCount > 0 && !m_data.isEmpty()) {
             QDataStream stream(m_data);
             char tmp[argCount] = { (decode(&stream, newData), void(), '0')... };
-            Q_UNUSED(tmp)
+            Q_UNUSED(tmp);
         }
     }
 
@@ -180,6 +189,7 @@ private:
     FunctionCode m_code = Invalid;
     QByteArray m_data;
     friend class QModbusSerialAdu;
+    friend struct QModbusPduPrivate;
 };
 Q_SERIALBUS_EXPORT QDebug operator<<(QDebug debug, const QModbusPdu &pdu);
 Q_SERIALBUS_EXPORT QDataStream &operator<<(QDataStream &stream, const QModbusPdu &pdu);
@@ -246,7 +256,7 @@ public:
         : QModbusResponse(FunctionCode(quint8(fc) | ExceptionByte), static_cast<quint8> (ec))
     {}
 
-    void setFunctionCode(FunctionCode c) {
+    void setFunctionCode(FunctionCode c) override {
         QModbusPdu::setFunctionCode(FunctionCode(quint8(c) | ExceptionByte));
     }
     void setExceptionCode(ExceptionCode ec) { QModbusPdu::encodeData(quint8(ec)); }
@@ -255,13 +265,13 @@ Q_SERIALBUS_EXPORT QDataStream &operator>>(QDataStream &stream, QModbusResponse 
 inline QDataStream &operator<<(QDataStream &stream, const QModbusResponse &pdu)
 { return stream << static_cast<const QModbusPdu &>(pdu); }
 
-Q_DECLARE_TYPEINFO(QModbusPdu, Q_MOVABLE_TYPE);
+Q_DECLARE_TYPEINFO(QModbusPdu, Q_RELOCATABLE_TYPE);
 Q_DECLARE_TYPEINFO(QModbusPdu::ExceptionCode, Q_PRIMITIVE_TYPE);
 Q_DECLARE_TYPEINFO(QModbusPdu::FunctionCode, Q_PRIMITIVE_TYPE);
 
-Q_DECLARE_TYPEINFO(QModbusRequest, Q_MOVABLE_TYPE);
-Q_DECLARE_TYPEINFO(QModbusResponse, Q_MOVABLE_TYPE);
-Q_DECLARE_TYPEINFO(QModbusExceptionResponse, Q_MOVABLE_TYPE);
+Q_DECLARE_TYPEINFO(QModbusRequest, Q_RELOCATABLE_TYPE);
+Q_DECLARE_TYPEINFO(QModbusResponse, Q_RELOCATABLE_TYPE);
+Q_DECLARE_TYPEINFO(QModbusExceptionResponse, Q_RELOCATABLE_TYPE);
 
 QT_END_NAMESPACE
 

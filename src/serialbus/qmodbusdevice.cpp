@@ -1,34 +1,37 @@
 /****************************************************************************
 **
 ** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: http://www.qt.io/licensing/
+** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the QtSerialBus module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL3$
+** $QT_BEGIN_LICENSE:LGPL$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see http://www.qt.io/terms-conditions. For further
-** information use the contact form at http://www.qt.io/contact-us.
+** and conditions see https://www.qt.io/terms-conditions. For further
+** information use the contact form at https://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** Foundation and appearing in the file LICENSE.LGPL3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl.html.
+** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or later as published by the Free
-** Software Foundation and appearing in the file LICENSE.GPL included in
-** the packaging of this file. Please review the following information to
-** ensure the GNU General Public License version 2.0 requirements will be
-** met: http://www.gnu.org/licenses/gpl-2.0.html.
+** General Public License version 2.0 or (at your option) the GNU General
+** Public license version 3 or any later version approved by the KDE Free
+** Qt Foundation. The licenses are as published by the Free Software
+** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
+** included in the packaging of this file. Please review the following
+** information to ensure the GNU General Public License requirements will
+** be met: https://www.gnu.org/licenses/gpl-2.0.html and
+** https://www.gnu.org/licenses/gpl-3.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -95,11 +98,6 @@ QModbusDevice::~QModbusDevice()
     \value NetworkPortParameter      This parameter holds the network port. \c int
     \value NetworkAddressParameter   This parameter holds the host address for network
                                      communication. \c QString
-
-    User options:
-
-    \value UserParameter             This enum value has been deprecated. There
-                                     will be no replacement.
 */
 
 /*!
@@ -120,7 +118,7 @@ QModbusDevice::~QModbusDevice()
 
     \sa ConnectionParameter
 */
-QVariant QModbusDevice::connectionParameter(int parameter) const
+QVariant QModbusDevice::connectionParameter(ConnectionParameter parameter) const
 {
     Q_D(const QModbusDevice);
     switch (parameter) {
@@ -143,7 +141,7 @@ QVariant QModbusDevice::connectionParameter(int parameter) const
     default:
         break;
     }
-    return d->m_userConnectionParams.value(parameter); // ### Qt6: remove
+    return {};
 }
 
 /*!
@@ -154,7 +152,7 @@ QVariant QModbusDevice::connectionParameter(int parameter) const
     \sa ConnectionParameter
     \sa connectionParameter()
 */
-void QModbusDevice::setConnectionParameter(int parameter, const QVariant &value)
+void QModbusDevice::setConnectionParameter(ConnectionParameter parameter, const QVariant &value)
 {
     Q_D(QModbusDevice);
     switch (parameter) {
@@ -182,7 +180,7 @@ void QModbusDevice::setConnectionParameter(int parameter, const QVariant &value)
         d->m_networkAddress = value.toString();
         break;
     default:
-        d->m_userConnectionParams.insert(parameter, value); // ### Qt6: remove
+        Q_ASSERT_X(false, "", "Connection parameter not supported.");
         break;
     }
 }
@@ -214,6 +212,27 @@ void QModbusDevice::setConnectionParameter(int parameter, const QVariant &value)
     \value ConnectingState  The device is being connected.
     \value ConnectedState   The device is connected to the Modbus network.
     \value ClosingState     The device is being closed.
+*/
+
+/*!
+    \since 6.0
+    \enum QModbusDevice::IntermediateError
+
+    This enum describes possible errors that can happen during a full send and
+    receive cycle for a Modbus reply.
+
+    \value ResponseCrcError         A Modbus response with a wrong CRC was received.
+    \value ResponseRequestMismatch  A Modbus response was received but did not
+                                    match the open request, probably due to the
+                                    PDU's function code not matching.
+
+    If any of the above intermediate errors occurred, the frame is likely
+    resent until the maximum number of retries has been reached.
+
+    The list of intermediate errors can be inspected from the \l QModbusReply
+    intermediate errors function.
+
+    \sa QModbusClient::numberOfRetries(), QModbusReply::intermediateErrors()
 */
 
 /*!

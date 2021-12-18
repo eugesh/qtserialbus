@@ -1,34 +1,37 @@
 /****************************************************************************
 **
 ** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: http://www.qt.io/licensing/
+** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the QtSerialBus module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL3$
+** $QT_BEGIN_LICENSE:LGPL$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see http://www.qt.io/terms-conditions. For further
-** information use the contact form at http://www.qt.io/contact-us.
+** and conditions see https://www.qt.io/terms-conditions. For further
+** information use the contact form at https://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** Foundation and appearing in the file LICENSE.LGPL3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl.html.
+** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or later as published by the Free
-** Software Foundation and appearing in the file LICENSE.GPL included in
-** the packaging of this file. Please review the following information to
-** ensure the GNU General Public License version 2.0 requirements will be
-** met: http://www.gnu.org/licenses/gpl-2.0.html.
+** General Public License version 2.0 or (at your option) the GNU General
+** Public license version 3 or any later version approved by the KDE Free
+** Qt Foundation. The licenses are as published by the Free Software
+** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
+** included in the packaging of this file. Please review the following
+** information to ensure the GNU General Public License requirements will
+** be met: https://www.gnu.org/licenses/gpl-2.0.html and
+** https://www.gnu.org/licenses/gpl-3.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -53,9 +56,9 @@ class QCanBusPrivate
 {
 public:
     QCanBusPrivate() { }
-    QCanBusPrivate(int index, const QJsonObject &meta) : meta(meta), index(index) {}
+    QCanBusPrivate(int index, const QCborMap &meta) : meta(meta), index(index) {}
 
-    QJsonObject meta;
+    QCborMap meta;
     QObject *factory = nullptr;
     int index = -1;
 };
@@ -70,9 +73,9 @@ static QCanBus *globalInstance = nullptr;
 
 static void loadPlugins()
 {
-    const QList<QJsonObject> meta = qFactoryLoader()->metaData();
+    const QList<QPluginParsedMetaData> meta = qFactoryLoader()->metaData();
     for (int i = 0; i < meta.count(); i++) {
-        const QJsonObject obj = meta.at(i).value(QLatin1String("MetaData")).toObject();
+        const QCborMap obj = meta.at(i).value(QtPluginMetaDataKeys::MetaData).toMap();
         if (obj.isEmpty())
             continue;
 
@@ -166,15 +169,15 @@ QList<QCanBusDeviceInfo> QCanBus::availableDevices(const QString &plugin, QStrin
     if (Q_UNLIKELY(!obj))
         return QList<QCanBusDeviceInfo>();
 
-    const QCanBusFactoryV2 *factoryV2 = qobject_cast<QCanBusFactoryV2 *>(obj);
-    if (Q_UNLIKELY(!factoryV2)) {
+    const QCanBusFactory *factory = qobject_cast<const QCanBusFactory *>(obj);
+    if (Q_UNLIKELY(!factory)) {
         setErrorMessage(errorMessage,
                         tr("The plugin '%1' does not provide this function.").arg(plugin));
         return QList<QCanBusDeviceInfo>();
     }
 
     QString errorString;
-    QList<QCanBusDeviceInfo> result = factoryV2->availableDevices(&errorString);
+    QList<QCanBusDeviceInfo> result = factory->availableDevices(&errorString);
 
     setErrorMessage(errorMessage, errorString);
     return result;
@@ -213,12 +216,8 @@ QCanBusDevice *QCanBus::createDevice(const QString &plugin, const QString &inter
     if (Q_UNLIKELY(!obj))
         return nullptr;
 
-    const QCanBusFactoryV2 *factoryV2 = qobject_cast<QCanBusFactoryV2 *>(obj);
-    if (Q_LIKELY(factoryV2))
-        return factoryV2->createDevice(interfaceName, errorMessage);
-
-    const QCanBusFactory *factory = qobject_cast<QCanBusFactory *>(obj);
-    if (factory)
+    const QCanBusFactory *factory = qobject_cast<const QCanBusFactory *>(obj);
+    if (Q_LIKELY(factory))
         return factory->createDevice(interfaceName, errorMessage);
 
     setErrorMessage(errorMessage,

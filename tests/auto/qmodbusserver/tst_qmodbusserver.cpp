@@ -1,34 +1,37 @@
 /****************************************************************************
 **
 ** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: http://www.qt.io/licensing/
+** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the QtSerialBus module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL3$
+** $QT_BEGIN_LICENSE:LGPL$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see http://www.qt.io/terms-conditions. For further
-** information use the contact form at http://www.qt.io/contact-us.
+** and conditions see https://www.qt.io/terms-conditions. For further
+** information use the contact form at https://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** Foundation and appearing in the file LICENSE.LGPL3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl.html.
+** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or later as published by the Free
-** Software Foundation and appearing in the file LICENSE.GPL included in
-** the packaging of this file. Please review the following information to
-** ensure the GNU General Public License version 2.0 requirements will be
-** met: http://www.gnu.org/licenses/gpl-2.0.html.
+** General Public License version 2.0 or (at your option) the GNU General
+** Public license version 3 or any later version approved by the KDE Free
+** Qt Foundation. The licenses are as published by the Free Software
+** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
+** included in the packaging of this file. Please review the following
+** information to ensure the GNU General Public License requirements will
+** be met: https://www.gnu.org/licenses/gpl-2.0.html and
+** https://www.gnu.org/licenses/gpl-3.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -36,7 +39,7 @@
 
 #include <QtSerialBus/qmodbusserver.h>
 #if QT_CONFIG(modbus_serialport)
-#include <QtSerialBus/qmodbusrtuserialslave.h>
+#include <QtSerialBus/qmodbusrtuserialserver.h>
 #endif
 #include <QtSerialBus/qmodbustcpserver.h>
 #include <QtSerialBus/qmodbusdeviceidentification.h>
@@ -93,7 +96,7 @@ private slots:
     {
         QCOMPARE(QModbusTcpServer().serverAddress(), 0xff);
 #if QT_CONFIG(modbus_serialport)
-        QCOMPARE(QModbusRtuSerialSlave().serverAddress(), 1);
+        QCOMPARE(QModbusRtuSerialServer().serverAddress(), 1);
 #endif
     }
 
@@ -898,8 +901,7 @@ private slots:
         }
 
         quint16 data = 0;
-        QSignalSpy writtenSpy(
-                    &server, SIGNAL(dataWritten(QModbusDataUnit::RegisterType,int,int)));
+        QSignalSpy writtenSpy(&server, &TestServer::dataWritten);
         QVERIFY(writtenSpy.isEmpty());
 
         QVERIFY(!server.data(registerType, MAP_RANGE+1, &data)); // out of range
@@ -940,10 +942,10 @@ private slots:
 
         //testing server.setData(ModbusDataUnit&)
 
-        const QVector<quint16> valueVector = { 1, 1, 1, 1, 1};
-        const QVector<quint16> zeroVector = { 0, 0, 0, 0, 0};
+        const QList<quint16> valueVector = { 1, 1, 1, 1, 1 };
+        const QList<quint16> zeroVector = { 0, 0, 0, 0, 0 };
         QModbusDataUnit rangeUnit(registerType, 7, valueVector);
-        QCOMPARE(rangeUnit.valueCount(), 5u);
+        QCOMPARE(rangeUnit.valueCount(), 5);
         QCOMPARE(rangeUnit.values().count(), 5);
         QCOMPARE(rangeUnit.startAddress(), 7);
         QVERIFY(rangeUnit.values() == valueVector);
@@ -952,8 +954,8 @@ private slots:
         writtenSpy.clear();
         QVERIFY(server.setData(rangeUnit) == validDataUnit);
         if (validDataUnit) {
-            for (int i = rangeUnit.startAddress();
-                 i < rangeUnit.startAddress() + int(rangeUnit.valueCount()); i++) {
+            for (qsizetype i = rangeUnit.startAddress();
+                 i < rangeUnit.startAddress() + rangeUnit.valueCount(); i++) {
                 quint16 readData = 0;
                 QVERIFY(server.data(registerType, i, &readData));
                 QCOMPARE(readData, valueVector.at(i-rangeUnit.startAddress()));
@@ -964,7 +966,7 @@ private slots:
             QCOMPARE(signalData.count(), 3);
             QCOMPARE(signalData.at(0).value<QModbusDataUnit::RegisterType>(), registerType);
             QCOMPARE(signalData.at(1).toInt(), rangeUnit.startAddress());
-            QCOMPARE(signalData.at(2).toUInt(), rangeUnit.valueCount());
+            QCOMPARE(signalData.at(2).toInt(), rangeUnit.valueCount());
         }
 
         // no writtenData() signal when writing same rangeUnit again
@@ -974,7 +976,7 @@ private slots:
 
         //never fits anywhere
         QModbusDataUnit oversizeUnit(registerType, 0, MAP_RANGE*2);
-        QCOMPARE(oversizeUnit.valueCount(), uint(MAP_RANGE*2));
+        QCOMPARE(oversizeUnit.valueCount(), MAP_RANGE*2);
         QCOMPARE(oversizeUnit.values().count(), MAP_RANGE*2);
         QCOMPARE(oversizeUnit.startAddress(), 0);
         QCOMPARE(oversizeUnit.registerType(), registerType);
@@ -1004,7 +1006,7 @@ private slots:
 
         //testing server.data(QModbusDataUnit *)
         QModbusDataUnit requestUnit(registerType, 7, 5);
-        QCOMPARE(requestUnit.valueCount(), 5u);
+        QCOMPARE(requestUnit.valueCount(), 5);
         QCOMPARE(requestUnit.values().count(), 5);
         QCOMPARE(requestUnit.startAddress(), 7);
         QVERIFY(requestUnit.registerType() == registerType);
@@ -1013,7 +1015,7 @@ private slots:
         QVERIFY(server.data(&requestUnit) == validDataUnit);
         if (validDataUnit) {
             QVERIFY(requestUnit.values() == valueVector);
-            QCOMPARE(requestUnit.valueCount(), 5u);
+            QCOMPARE(requestUnit.valueCount(), 5);
             QCOMPARE(requestUnit.values().count(), 5);
             QCOMPARE(requestUnit.startAddress(), 7);
         }
@@ -1031,7 +1033,7 @@ private slots:
         requestUnit.setStartAddress(-1);
         QVERIFY(server.data(&requestUnit) == validDataUnit);
         if (validDataUnit) {
-            QCOMPARE(requestUnit.valueCount(), uint(MAP_RANGE));
+            QCOMPARE(requestUnit.valueCount(), MAP_RANGE);
             QCOMPARE(requestUnit.values().count(), MAP_RANGE);
         }
 
@@ -1045,7 +1047,7 @@ private slots:
         oversizeUnit.setStartAddress(-1);
         QVERIFY(server.data(&oversizeUnit) == validDataUnit);
         if (validDataUnit) {
-            QCOMPARE(oversizeUnit.valueCount(), uint(MAP_RANGE));
+            QCOMPARE(oversizeUnit.valueCount(), MAP_RANGE);
             QCOMPARE(oversizeUnit.values().count(), MAP_RANGE);
         }
     }
@@ -1079,13 +1081,13 @@ private slots:
 
         // block write at start
         QModbusDataUnit unit(QModbusDataUnit::HoldingRegisters, 3, 3);
-        for (int i = 0; i < 3; i++)
+        for (qsizetype i = 0; i < 3; i++)
             unit.setValue(i, quint16(0x1111 + i));
         QVERIFY(server.setData(unit));
 
         QModbusDataUnit results(QModbusDataUnit::HoldingRegisters, 3, 3);
         QVERIFY(server.data(&results));
-        QCOMPARE(results.values(), QVector<quint16>({0x1111, 0x1112, 0x1113}));
+        QCOMPARE(results.values(), QList<quint16>({ 0x1111, 0x1112, 0x1113 }));
 
         //i block write at end
         unit.setStartAddress(4);
@@ -1093,8 +1095,7 @@ private slots:
         unit.setValues({0x1, 0x2, 0x3});
         QVERIFY(server.setData(unit));
         QVERIFY(server.data(&results));
-        QCOMPARE(results.values(), QVector<quint16>({0x1, 0x2, 0x3}));
-
+        QCOMPARE(results.values(), QList<quint16>({ 0x1, 0x2, 0x3 }));
 
         unit.setStartAddress(2); // overlap in front
         QVERIFY(!server.setData(unit));

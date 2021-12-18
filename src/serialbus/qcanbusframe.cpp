@@ -1,34 +1,37 @@
 /****************************************************************************
 **
 ** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: http://www.qt.io/licensing/
+** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the QtSerialBus module of the Qt Toolkit.
 **
-** $QT_BEGIN_LICENSE:LGPL3$
+** $QT_BEGIN_LICENSE:LGPL$
 ** Commercial License Usage
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
 ** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see http://www.qt.io/terms-conditions. For further
-** information use the contact form at http://www.qt.io/contact-us.
+** and conditions see https://www.qt.io/terms-conditions. For further
+** information use the contact form at https://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** Foundation and appearing in the file LICENSE.LGPL3 included in the
 ** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl.html.
+** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or later as published by the Free
-** Software Foundation and appearing in the file LICENSE.GPL included in
-** the packaging of this file. Please review the following information to
-** ensure the GNU General Public License version 2.0 requirements will be
-** met: http://www.gnu.org/licenses/gpl-2.0.html.
+** General Public License version 2.0 or (at your option) the GNU General
+** Public license version 3 or any later version approved by the KDE Free
+** Qt Foundation. The licenses are as published by the Free Software
+** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
+** included in the packaging of this file. Please review the following
+** information to ensure the GNU General Public License requirements will
+** be met: https://www.gnu.org/licenses/gpl-2.0.html and
+** https://www.gnu.org/licenses/gpl-3.0.html.
 **
 ** $QT_END_LICENSE$
 **
@@ -60,7 +63,7 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
-    \fn QCanBusFrame::QCanBusFrame(quint32 identifier, const QByteArray &data)
+    \fn QCanBusFrame::QCanBusFrame(QCanBusFrame::FrameId identifier, const QByteArray &data)
 
     Constructs a CAN frame using \a identifier as the frame identifier and \a data as the payload.
 */
@@ -78,7 +81,7 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
-    \fn QCanBusFrame::setFrameId(quint32 newFrameId)
+    \fn QCanBusFrame::setFrameId(QCanBusFrame::FrameId newFrameId)
 
     Sets the identifier of the CAN frame to \a newFrameId.
 
@@ -102,7 +105,7 @@ QT_BEGIN_NAMESPACE
     enabled on the \l QCanBusDevice by setting the \l QCanBusDevice::CanFdKey.
 
     Frames of type \l RemoteRequestFrame (RTR) do not have a payload. However they have to
-    provide an indication of the responses expected payload length. To set the length expection it
+    provide an indication of the responses expected payload length. To set the expected length it
     is necessary to set a fake payload whose length matches the expected payload length of the
     response. One way of doing this might be as follows:
 
@@ -125,7 +128,7 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
-    \fn quint32 QCanBusFrame::frameId() const
+    \fn QCanBusFrame::FrameId QCanBusFrame::frameId() const
 
     Returns the CAN frame identifier. If the CAN frame uses the
     extended frame format, the identifier has a maximum of 29 bits;
@@ -421,17 +424,22 @@ QString QCanBusFrame::toString() const
         break;
     }
 
-    const char * const idFormat = hasExtendedFrameFormat() ? "%08X" : "     %03X";
-    const char * const dlcFormat = hasFlexibleDataRateFormat() ? "  [%02d]" : "   [%d]";
     QString result;
-    result.append(QString::asprintf(idFormat, static_cast<uint>(frameId())));
-    result.append(QString::asprintf(dlcFormat, payload().size()));
+    result.append(hasExtendedFrameFormat() ? u""_qs : u"     "_qs);
+    result.append(u"%1"_qs.arg(static_cast<uint>(frameId()),
+                               hasExtendedFrameFormat() ? 8 : 3,
+                               16, QLatin1Char('0')).toUpper());
+
+    result.append(hasFlexibleDataRateFormat() ? u"  "_qs : u"   "_qs);
+    result.append(u"[%1]"_qs.arg(payload().size(),
+                               hasFlexibleDataRateFormat() ? 2 : 0,
+                               10, QLatin1Char('0')));
 
     if (type == RemoteRequestFrame) {
-        result.append(QLatin1String("  Remote Request"));
+        result.append(u"  Remote Request"_qs);
     } else if (!payload().isEmpty()) {
         const QByteArray data = payload().toHex(' ').toUpper();
-        result.append(QLatin1String("  "));
+        result.append(u"  "_qs);
         result.append(QLatin1String(data));
     }
 
@@ -470,7 +478,7 @@ QDataStream &operator<<(QDataStream &out, const QCanBusFrame &frame)
 */
 QDataStream &operator>>(QDataStream &in, QCanBusFrame &frame)
 {
-    quint32 frameId;
+    QCanBusFrame::FrameId frameId;
     quint8 frameType;
     quint8 version;
     bool extendedFrameFormat;
