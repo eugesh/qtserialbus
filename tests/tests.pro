@@ -1,4 +1,4 @@
 requires(qtHaveModule(serialbus))
 
 TEMPLATE = subdirs
-SUBDIRS += auto
+SUBDIRS += auto stress

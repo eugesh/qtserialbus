@@ -140,7 +140,7 @@ void tst_QSerialBusReader::loopback()
         for (const auto &frame : frames) {
             QCOMPARE(frame.frameId(), frameId);
             bool *ok = nullptr;
-            const int frameNumber = frame.payload().toInt(ok, 16);
+            const int frameNumber = frame.payload().toHex().toInt(ok, 16);
             currentReadFrameNumberMod = ++currentReadFrameNumber % 100;
             if (frameNumber != currentReadFrameNumberMod)
                 exitLoop();
