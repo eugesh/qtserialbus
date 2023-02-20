@@ -54,6 +54,7 @@
 #include <QCanBusDevice> // for CanBusError
 
 #include <QMainWindow>
+#include <QTimer>
 
 class ConnectDialog;
 
@@ -83,6 +84,7 @@ private slots:
     void connectDevice();
     void disconnectDevice();
     void processFramesWritten(qint64);
+    void on_updateViewTimer();
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -96,6 +98,7 @@ private:
     QLabel *m_written = nullptr;
     ConnectDialog *m_connectDialog = nullptr;
     QCanBusDevice *m_canDevice = nullptr;
+    QTimer m_update_view_timer;
 };
 
 #endif // MAINWINDOW_H

@@ -74,6 +74,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     initActionsConnections();
     QTimer::singleShot(50, m_connectDialog, &ConnectDialog::show);
+    m_update_view_timer.start(50);
 }
 
 MainWindow::~MainWindow()
@@ -246,4 +247,8 @@ void MainWindow::sendFrame(const QCanBusFrame &frame) const
         return;
 
     m_canDevice->writeFrame(frame);
+}
+
+void MainWindow::on_updateViewTimer() {
+
 }
