@@ -8,6 +8,7 @@
 #include <QCanBusDeviceInfo>
 
 #include <QDialog>
+#include <QValidator>
 
 QT_BEGIN_NAMESPACE
 
@@ -17,6 +18,20 @@ class ConnectDialog;
 class QSettings;
 
 QT_END_NAMESPACE
+
+class BinIntegerValidator : public QValidator
+{
+    Q_OBJECT
+public:
+    explicit BinIntegerValidator(uint maximum, QObject *parent = nullptr);
+
+    QValidator::State validate(QString &input, int &) const;
+
+    void setMaximum(uint maximum);
+
+private:
+    uint m_maximum = 0;
+};
 
 class ConnectDialog : public QDialog
 {
